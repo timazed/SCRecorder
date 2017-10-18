@@ -49,8 +49,7 @@
 + (AVCaptureDevice *)videoDeviceForPosition:(AVCaptureDevicePosition)position {
 #if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
     NSArray *videoDevices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
-#endif
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
     NSArray *videoDevices = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera]
                                                                                    mediaType:AVMediaTypeVideo
                                                                                     position:AVCaptureDevicePositionUnspecified].devices;
@@ -107,8 +106,7 @@
 + (NSString *)bestCaptureSessionPresetCompatibleWithAllDevices {
 #if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
     NSArray *videoDevices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
-#endif
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
     NSArray *videoDevices = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera]
                                                                                    mediaType:AVMediaTypeVideo
                                                                                     position:AVCaptureDevicePositionUnspecified].devices;
