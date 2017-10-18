@@ -322,11 +322,6 @@
 			attributes = {
 				CLASSPREFIX = SC;
 				LastUpgradeCheck = 0510;
-				TargetAttributes = {
-					DC7F370718FC2A0D00D54901 = {
-						DevelopmentTeam = T9G4574SJG;
-					};
-				};
 			};
 			buildConfigurationList = DC7F370318FC2A0D00D54901 /* Build configuration list for PBXProject "SCRecorderExamples" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -515,7 +510,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEFINES_MODULE = NO;
-				DEVELOPMENT_TEAM = T9G4574SJG;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Sources/SCRecorderExamples-Prefix.pch";
@@ -545,7 +540,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEFINES_MODULE = NO;
-				DEVELOPMENT_TEAM = T9G4574SJG;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Sources/SCRecorderExamples-Prefix.pch";
