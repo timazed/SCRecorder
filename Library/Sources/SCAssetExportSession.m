@@ -179,7 +179,7 @@ static CGContextRef SCCreateContextFromPixelBuffer(CVPixelBufferRef pixelBuffer)
 
         CGContextRef ctx = SCCreateContextFromPixelBuffer(outputPixelBuffer);
 
-        void (^layoutBlock)() = ^{
+        void (^layoutBlock)(void) = ^{
             overlay.frame = CGRectMake(0, 0, videoSize.width, videoSize.height);
 
             if ([overlay respondsToSelector:@selector(updateWithVideoTime:)]) {
@@ -385,7 +385,7 @@ static CGContextRef SCCreateContextFromPixelBuffer(CVPixelBufferRef pixelBuffer)
     }
 }
 
-- (void)callCompletionHandler:(void (^)())completionHandler {
+- (void)callCompletionHandler:(void (^)(void))completionHandler {
     if (!_cancelled) {
         [self _setProgress:1];
     }
@@ -655,7 +655,7 @@ static CGContextRef SCCreateContextFromPixelBuffer(CVPixelBufferRef pixelBuffer)
     }
 }
 
-- (void)exportAsynchronouslyWithCompletionHandler:(void (^)())completionHandler {
+- (void)exportAsynchronouslyWithCompletionHandler:(void (^)(void))completionHandler {
     _cancelled = NO;
     _nextAllowedVideoFrame = kCMTimeZero;
     NSError *error = nil;
