@@ -12,6 +12,7 @@
 #define kSCRecorderRecordSessionQueueKey "SCRecorderRecordSessionQueue"
 #define kMinTimeBetweenAppend 0.004
 
+
 @interface SCRecorder() {
     AVCaptureVideoPreviewLayer *_previewLayer;
     AVCaptureSession *_captureSession;
@@ -19,7 +20,11 @@
     AVCaptureVideoDataOutput *_videoOutput;
     AVCaptureMovieFileOutput *_movieOutput;
     AVCaptureAudioDataOutput *_audioOutput;
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
     AVCaptureStillImageOutput *_photoOutput;
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+    AVCapturePhotoOutput *_photoOutput;
+#endif
     SCSampleBufferHolder *_lastVideoBuffer;
     SCSampleBufferHolder *_lastAudioBuffer;
     CIContext *_context;
@@ -34,10 +39,15 @@
     double _lastAppendedVideoTime;
     NSTimer *_movieOutputProgressTimer;
     CMTime _lastMovieFileOutputTime;
-    void(^_pauseCompletionHandler)();
+    void(^_pauseCompletionHandler)(void);
     SCFilter *_transformFilter;
     size_t _transformFilterBufferWidth;
     size_t _transformFilterBufferHeight;
+    
+    CapturePhotoCompletionBlock _captureCompletionBlock;
+    CMSampleBufferRef _photoSampleBuffer;
+    CMSampleBufferRef _previewPhotoSampleBuffer;
+    CGImageRef _photoRef;
 }
 
 @end
@@ -272,8 +282,12 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
         
         if (self.photoConfiguration.enabled) {
             if (_photoOutput == nil) {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
                 _photoOutput = [[AVCaptureStillImageOutput alloc] init];
                 _photoOutput.outputSettings = [self.photoConfiguration createOutputSettings];
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+                _photoOutput = [[AVCapturePhotoOutput alloc] init];
+#endif
             }
             
             if (![session.outputs containsObject:_photoOutput]) {
@@ -377,7 +391,8 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
     return [self _imageFromSampleBufferHolder:_lastVideoBuffer];
 }
 
-- (void)capturePhoto:(void(^)(NSError*, UIImage*))completionHandler {
+- (void)capturePhoto:(CapturePhotoCompletionBlock)completionHandler {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
     AVCaptureConnection *connection = [_photoOutput connectionWithMediaType:AVMediaTypeVideo];
     if (connection != nil) {
         [_photoOutput captureStillImageAsynchronouslyFromConnection:connection completionHandler:
@@ -406,7 +421,42 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
             completionHandler([SCRecorder createError:@"Camera session not started or Photo disabled"], nil);
         }
     }
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+    _captureCompletionBlock = completionHandler;
+    [_photoOutput capturePhotoWithSettings:self.photoConfiguration.photoSettings delegate:self];
+#endif
 }
+
+#pragma mark - AVCapturePhotoOutputDelegate
+
+-(void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhotoSampleBuffer:(CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(AVCaptureBracketedStillImageSettings *)bracketSettings error:(NSError *)error  NS_AVAILABLE_IOS(10) {
+    if (error == nil) {
+        _photoSampleBuffer = photoSampleBuffer;
+        _previewPhotoSampleBuffer = previewPhotoSampleBuffer;
+    }
+}
+-(void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(NSError *)error  NS_AVAILABLE_IOS(11.0) {
+    _photoRef = photo.CGImageRepresentation;
+}
+
+
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+-(void)captureOutput:(AVCapturePhotoOutput *)output didFinishCaptureForResolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings error:(NSError *)error {
+    UIImage *image = nil;
+    if (_photoSampleBuffer || _previewPhotoSampleBuffer) {
+        NSData *jpegData = [AVCapturePhotoOutput JPEGPhotoDataRepresentationForJPEGSampleBuffer:_photoSampleBuffer previewPhotoSampleBuffer:_previewPhotoSampleBuffer];
+        image = [UIImage imageWithData:jpegData];
+    } else if (_photoRef != nil)  {
+        image = [UIImage imageWithCGImage:_photoRef];
+    }
+    _captureCompletionBlock(error, image);
+    
+    _captureCompletionBlock = nil;
+    _photoSampleBuffer = nil;
+    _previewPhotoSampleBuffer = nil;
+}
+
+#endif
 
 - (void)unprepare {
     if (_captureSession != nil) {
@@ -452,7 +502,7 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
 }
 
 - (void)record {
-    void (^block)() = ^{
+    void (^block)(void) = ^{
         _isRecording = YES;
         if (_movieOutput != nil && _session != nil) {
             _movieOutput.maxRecordedDuration = self.maxRecordDuration;
@@ -474,10 +524,10 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
     [self pause:nil];
 }
 
-- (void)pause:(void(^)())completionHandler {
+- (void)pause:( void(^ __nullable)(void)) completionHandler {
     _isRecording = NO;
     
-    void (^block)() = ^{
+    void (^block)(void) = ^{
         SCRecordSession *recordSession = _session;
         
         if (recordSession != nil) {
@@ -670,7 +720,7 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
         }
         
         [_session appendRecordSegmentUrl:outputFileURL info:[self _createSegmentInfo] error:actualError completionHandler:^(SCRecordSessionSegment *segment, NSError *error) {
-            void (^pauseCompletionHandler)() = _pauseCompletionHandler;
+            void (^pauseCompletionHandler)(void) = _pauseCompletionHandler;
             _pauseCompletionHandler = nil;
             
             SCRecordSession *recordSession = _session;
@@ -928,7 +978,9 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
             });
         }
     } else if (context == SCRecorderPhotoOptionsContext) {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
         _photoOutput.outputSettings = [_photoConfiguration createOutputSettings];
+#endif
     }
 }
 
@@ -1280,13 +1332,13 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
     return _previewView;
 }
 
-- (NSDictionary*)photoOutputSettings {
-    return _photoOutput.outputSettings;
-}
-
-- (void)setPhotoOutputSettings:(NSDictionary *)photoOutputSettings {
-    _photoOutput.outputSettings = photoOutputSettings;
-}
+//- (NSDictionary*)photoOutputSettings {
+//    return _photoOutput.outputSettings;
+//}
+//
+//- (void)setPhotoOutputSettings:(NSDictionary *)photoOutputSettings {
+//    _photoOutput.outputSettings = photoOutputSettings;
+//}
 
 - (void)setDevice:(AVCaptureDevicePosition)device {
     [self willChangeValueForKey:@"device"];
@@ -1305,8 +1357,8 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
 - (void)setFlashMode:(SCFlashMode)flashMode {
     AVCaptureDevice *currentDevice = [self videoDevice];
     NSError *error = nil;
-    
     if (currentDevice.hasFlash) {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
         if ([currentDevice lockForConfiguration:&error]) {
             if (flashMode == SCFlashModeLight) {
                 if ([currentDevice isTorchModeSupported:AVCaptureTorchModeOn]) {
@@ -1323,13 +1375,30 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
                     [currentDevice setFlashMode:(AVCaptureFlashMode)flashMode];
                 }
             }
-            
             [currentDevice unlockForConfiguration];
         }
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+        if (flashMode == SCFlashModeLight) {
+            if ([[self.photoOutput supportedFlashModes] containsObject:@(AVCaptureTorchModeOn)]) {
+                self.photoConfiguration.photoSettings.flashMode = AVCaptureTorchModeOn;
+            }
+            if ([[self.photoOutput supportedFlashModes] containsObject:@(AVCaptureTorchModeOff)]) {
+                self.photoConfiguration.photoSettings.flashMode = AVCaptureTorchModeOff;
+            }
+        } else {
+            if ([[self.photoOutput supportedFlashModes] containsObject:@(AVCaptureTorchModeOff)]) {
+                self.photoConfiguration.photoSettings.flashMode = AVCaptureTorchModeOff;
+            }
+            if ([[self.photoOutput supportedFlashModes] containsObject:@(flashMode)]) {
+                self.photoConfiguration.photoSettings.flashMode = (AVCaptureFlashMode)flashMode;
+            }
+        }
+#endif
     } else {
         error = [SCRecorder createError:@"Current device does not support flash"];
     }
     
+
     id<SCRecorderDelegate> delegate = self.delegate;
     if ([delegate respondsToSelector:@selector(recorder:didChangeFlashMode:error:)]) {
         [delegate recorder:self didChangeFlashMode:flashMode error:error];
@@ -1564,9 +1633,15 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
     return _audioOutput;
 }
 
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
 - (AVCaptureStillImageOutput *)photoOutput {
     return _photoOutput;
 }
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+- (AVCapturePhotoOutput *)photoOutput {
+    return _photoOutput;
+}
+#endif
 
 - (BOOL)audioEnabledAndReady {
     return _audioOutputAdded && _audioInputAdded && !_audioConfiguration.shouldIgnore;

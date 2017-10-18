@@ -17,6 +17,7 @@
  */
 @property (assign, nonatomic) BOOL enabled;
 
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
 /**
  If set, every other properties but "enabled" will be ignored
  and this options dictionary will be used instead.
@@ -27,5 +28,14 @@
  Returns the output settings for the 
  */
 - (NSDictionary *__nonnull)createOutputSettings;
+
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+
+/**
+ * iOS 10 plus capture settings
+ */
+@property (readonly, nonatomic) AVCapturePhotoSettings *__nonnull photoSettings;
+
+#endif
 
 @end

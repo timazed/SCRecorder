@@ -21,7 +21,19 @@
 // Convenience
 #import "SCRecorderHeader.h"
 
-@interface SCRecorder : NSObject<AVCaptureAudioDataOutputSampleBufferDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureFileOutputRecordingDelegate>
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
+
+#define PROTOCOLS AVCaptureAudioDataOutputSampleBufferDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureFileOutputRecordingDelegate
+
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+
+#define PROTOCOLS AVCaptureAudioDataOutputSampleBufferDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureFileOutputRecordingDelegate, AVCapturePhotoCaptureDelegate
+
+#endif
+
+typedef void (^CapturePhotoCompletionBlock)(NSError *__nullable error, UIImage *__nullable image);
+
+@interface SCRecorder : NSObject<PROTOCOLS>
 
 /**
  Access the configuration for the video.
@@ -258,15 +270,27 @@
  */
 @property (readonly, nonatomic) AVCaptureVideoDataOutput *__nullable videoOutput;
 
+
 /**
  The underlying AVCaptureAudioDataOutput
  */
 @property (readonly, nonatomic) AVCaptureAudioDataOutput *__nullable audioOutput;
 
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
 /**
  The underlying AVCaptureStillImageOutput
  */
 @property (readonly, nonatomic) AVCaptureStillImageOutput *__nullable photoOutput;
+
+#elif __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
+
+/**
+ The underlying AVCaptureStillImageOutput
+ */
+@property (readonly, nonatomic) AVCapturePhotoOutput *__nullable photoOutput;
+
+#endif
+
 
 /**
  The dispatch queue that the SCRecorder uses for sending messages to the attached
@@ -397,13 +421,13 @@
  if it is empty or not.
  @param completionHandler called on the main queue when the recorder is ready to record again.
  */
-- (void)pause:( void(^ __nullable)()) completionHandler;
+- (void)pause:( void(^ __nullable)(void)) completionHandler;
 
 /**
  Capture a photo from the camera
  @param completionHandler called on the main queue with the image taken or an error in case of a problem
  */
-- (void)capturePhoto:(void(^ __nonnull)(NSError *__nullable error, UIImage *__nullable image))completionHandler;
+- (void)capturePhoto:(CapturePhotoCompletionBlock _Nullable )completionHandler;
 
 /**
  Signal to the recorder that the previewView frame has changed.

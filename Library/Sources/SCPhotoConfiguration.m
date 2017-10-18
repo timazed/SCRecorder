@@ -15,10 +15,15 @@
     
     if (self) {
         _enabled = YES;
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 10000
+        _photoSettings = [[AVCapturePhotoSettings alloc] init];
+#endif
     }
     
     return self;
 }
+
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 10000
 
 - (void)setOptions:(NSDictionary *)options {
     [self willChangeValueForKey:@"options"];
@@ -35,5 +40,7 @@
         return _options;
     }
 }
+
+#endif
 
 @end

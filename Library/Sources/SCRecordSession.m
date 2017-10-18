@@ -152,7 +152,7 @@ NSString * const SCRecordSessionDocumentDirectory = @"DocumentDirectory";
     return [NSError errorWithDomain:@"SCRecordSession" code:200 userInfo:@{NSLocalizedDescriptionKey : errorDescription}];
 }
 
-- (void)dispatchSyncOnSessionQueue:(void(^)())block {
+- (void)dispatchSyncOnSessionQueue:(void(^)(void))block {
     SCRecorder *recorder = self.recorder;
     
     if (recorder == nil || [SCRecorder isSessionQueue]) {
@@ -445,7 +445,7 @@ NSString * const SCRecordSessionDocumentDirectory = @"DocumentDirectory";
     return sout;
 }
 
-- (void)beginSegment:(NSError**)error {
+- (void)beginSegment:(NSError* __autoreleasing *)error {
     [self dispatchSyncOnSessionQueue:^{
         if (_assetWriter == nil) {
             _assetWriter = [self createWriter:error];
@@ -629,7 +629,7 @@ NSString * const SCRecordSessionDocumentDirectory = @"DocumentDirectory";
     }
 }
 
-- (void)cancelSession:(void (^)())completionHandler {
+- (void)cancelSession:(void (^)(void))completionHandler {
     [self dispatchSyncOnSessionQueue:^{
         if (_assetWriter == nil) {
             [self removeAllSegments];
