@@ -73,6 +73,7 @@
         if (error == nil) {
             image = [UIImage imageWithCGImage:thumbnailImage];
             _thumbnail = image;
+            CGImageRelease(thumbnailImage);
         } else {
             NSLog(@"Unable to generate thumbnail for %@: %@", self.url, error.localizedDescription);
         }
@@ -93,6 +94,7 @@
         if (error == nil) {
             image = [UIImage imageWithCGImage:lastImage];
             _lastImage = image;
+            CGImageRelease(lastImage);
         } else {
             NSLog(@"Unable to generate lastImage for %@: %@", self.url, error.localizedDescription);
         }
