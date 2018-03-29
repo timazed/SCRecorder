@@ -16,7 +16,7 @@
     if (self) {
         _enabled = YES;
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= 10000
-        _photoSettings = [[AVCapturePhotoSettings alloc] init];
+        _photoSettings = [AVCapturePhotoSettings photoSettingsWithFormat:@{AVVideoCodecKey: AVVideoCodecJPEG}];
 #endif
     }
     
@@ -42,5 +42,12 @@
 }
 
 #endif
+
+-(void)createPhotoSettingsClone NS_AVAILABLE_IOS(10) {
+    AVCapturePhotoSettings *newSettings = [AVCapturePhotoSettings photoSettingsWithFormat:@{AVVideoCodecKey: AVVideoCodecJPEG}];
+    newSettings.flashMode = _photoSettings.flashMode;
+    _photoSettings = newSettings;
+}
+
 
 @end

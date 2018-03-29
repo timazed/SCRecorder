@@ -45,9 +45,7 @@
     size_t _transformFilterBufferHeight;
     
     CapturePhotoCompletionBlock _captureCompletionBlock;
-    CMSampleBufferRef _photoSampleBuffer;
-    CMSampleBufferRef _previewPhotoSampleBuffer;
-    CGImageRef _photoRef;
+    UIImage *_capturedImage;
 }
 
 @end
@@ -427,36 +425,37 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
 #endif
 }
 
+
 #pragma mark - AVCapturePhotoOutputDelegate
+
 
 -(void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhotoSampleBuffer:(CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(AVCaptureBracketedStillImageSettings *)bracketSettings error:(NSError *)error  NS_AVAILABLE_IOS(10) {
     if (error == nil) {
-        _photoSampleBuffer = photoSampleBuffer;
-        _previewPhotoSampleBuffer = previewPhotoSampleBuffer;
+        NSData *jpegData = [AVCapturePhotoOutput JPEGPhotoDataRepresentationForJPEGSampleBuffer:photoSampleBuffer previewPhotoSampleBuffer:previewPhotoSampleBuffer];
+        UIImage *mirrored = [UIImage imageWithData:jpegData];
+        if (_mirrorOnFrontCamera) {
+            _capturedImage = [UIImage imageWithCGImage:mirrored.CGImage scale:mirrored.scale orientation:UIImageOrientationLeftMirrored];
+        } else {
+            _capturedImage = mirrored;
+        }
     }
 }
+
 -(void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(NSError *)error  NS_AVAILABLE_IOS(11.0) {
-    _photoRef = photo.CGImageRepresentation;
-}
-
-
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 10000
--(void)captureOutput:(AVCapturePhotoOutput *)output didFinishCaptureForResolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings error:(NSError *)error {
-    UIImage *image = nil;
-    if (_photoSampleBuffer || _previewPhotoSampleBuffer) {
-        NSData *jpegData = [AVCapturePhotoOutput JPEGPhotoDataRepresentationForJPEGSampleBuffer:_photoSampleBuffer previewPhotoSampleBuffer:_previewPhotoSampleBuffer];
-        image = [UIImage imageWithData:jpegData];
-    } else if (_photoRef != nil)  {
-        image = [UIImage imageWithCGImage:_photoRef];
+    UIImage *mirrored = [UIImage imageWithCGImage:photo.CGImageRepresentation scale:[UIScreen mainScreen].scale orientation:UIImageOrientationRight];
+    if (_mirrorOnFrontCamera) {
+        _capturedImage = [UIImage imageWithCGImage:mirrored.CGImage scale:mirrored.scale orientation:UIImageOrientationLeftMirrored];
+    } else {
+        _capturedImage = mirrored;
     }
-    _captureCompletionBlock(error, image);
-    
-    _captureCompletionBlock = nil;
-    _photoSampleBuffer = nil;
-    _previewPhotoSampleBuffer = nil;
 }
 
-#endif
+-(void)captureOutput:(AVCapturePhotoOutput *)output didFinishCaptureForResolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings error:(NSError *)error  NS_AVAILABLE_IOS(10) {
+    _captureCompletionBlock(error, _capturedImage);
+    _captureCompletionBlock = nil;
+    _capturedImage = nil;
+    [self.photoConfiguration createPhotoSettingsClone];
+}
 
 - (void)unprepare {
     if (_captureSession != nil) {
@@ -1331,14 +1330,6 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
 - (UIView*)previewView {
     return _previewView;
 }
-
-//- (NSDictionary*)photoOutputSettings {
-//    return _photoOutput.outputSettings;
-//}
-//
-//- (void)setPhotoOutputSettings:(NSDictionary *)photoOutputSettings {
-//    _photoOutput.outputSettings = photoOutputSettings;
-//}
 
 - (void)setDevice:(AVCaptureDevicePosition)device {
     [self willChangeValueForKey:@"device"];

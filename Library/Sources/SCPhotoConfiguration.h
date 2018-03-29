@@ -8,6 +8,11 @@
 
 #import "SCMediaTypeConfiguration.h"
 
+
+/**
+ * TODO: Make this AVCapturePhotoSettings be created on each request.
+ * Create a set method for options that are stored in a map then create whats necessary depending on platform version.
+ **/
 @interface SCPhotoConfiguration : NSObject
 
 /**
@@ -25,7 +30,7 @@
 @property (copy, nonatomic) NSDictionary *__nullable options;
 
 /**
- Returns the output settings for the 
+ Returns the output settings for the
  */
 - (NSDictionary *__nonnull)createOutputSettings;
 
@@ -34,7 +39,10 @@
 /**
  * iOS 10 plus capture settings
  */
+
 @property (readonly, nonatomic) AVCapturePhotoSettings *__nonnull photoSettings;
+
+-(void)createPhotoSettingsClone;
 
 #endif
 
