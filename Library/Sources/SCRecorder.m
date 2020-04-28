@@ -443,7 +443,7 @@ static char* SCRecorderPhotoOptionsContext = "PhotoOptionsContext";
 
 -(void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(NSError *)error  NS_AVAILABLE_IOS(11.0) {
     UIImage *mirrored = [UIImage imageWithCGImage:photo.CGImageRepresentation scale:[UIScreen mainScreen].scale orientation:UIImageOrientationRight];
-    if (_mirrorOnFrontCamera) {
+    if (_mirrorOnFrontCamera && _device == AVCaptureDevicePositionFront) {
         _capturedImage = [UIImage imageWithCGImage:mirrored.CGImage scale:mirrored.scale orientation:UIImageOrientationLeftMirrored];
     } else {
         _capturedImage = mirrored;
